@@ -1,0 +1,48 @@
+{
+  "name": "ply-js",
+  "version": "0.1.0",
+  "description": "A TypeScript port based on python-plyfile for reading and writing .ply files",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "require": "./dist/index.js",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "test:cov": "NODE_OPTIONS=--max-old-space-size=4096 APP_ENV=local jest --coverage --coverageReporters=lcov --coverageReporters=json-summary --coverageReporters=text --runInBand",
+    "prepublishOnly": "npm run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/GustavoDiogo/ply-js.git"
+  },
+  "keywords": [
+    "ply",
+    "3d",
+    "mesh",
+    "point cloud",
+    "geometry",
+    "typescript"
+  ],
+  "author": "GustavoDiogo",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/GustavoDiogo/ply-js/issues"
+  },
+  "homepage": "https://github.com/GustavoDiogo/ply-js#readme",
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "@types/node": "^24.0.12",
+    "jest": "^30.0.4",
+    "ts-jest": "^29.4.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ]
+}
