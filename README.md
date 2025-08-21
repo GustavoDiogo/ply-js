@@ -1,62 +1,42 @@
 # plyjs
 
-> A modern TypeScript port of [`python-plyfile`](https://github.com/dranjan/python-plyfile) for reading and writing `.ply` 3D mesh files.
+A modern TypeScript library for reading and writing `.ply` 3D mesh files (ASCII and binary), inspired by [`python-plyfile`](https://github.com/dranjan/python-plyfile).
 
----
+## Features
 
-## ✨ Features
+- Read/write ASCII and binary `.ply` files
+- Scalar and list property support
+- Endian-aware binary decoding
+- Fully typed API
+- Node.js compatible
 
-- ✅ Read and write **ASCII and binary** `.ply` files
-- ✅ Support for scalar and list properties
-- ✅ Endian-aware binary decoding
-- ✅ Fully typed with TypeScript
-- ✅ Works with Node.js (Buffer and streams)
+## Basic Usage
 
----
-
-## 🚀 Quick Usage
-
-###  Load a .ply file (ASCII or Binary)
-
+### Read ASCII `.ply`
 ```ts
-import { readPly } from 'plyjs';
+import { readPlyFromLines } from 'plyjs';
 import fs from 'fs';
-
-const buffer = fs.readFileSync('mesh.ply');
-const ply = readPly(buffer);
-
-console.log(ply.elements[0].name); // e.g., 'vertex'
-console.log(ply.elements[0].data); // TypedArray or array of lists
+const lines = fs.readFileSync('mesh.ply', 'utf-8').split(/\r?\n/);
+const ply = readPlyFromLines(lines);
 ```
 
-### Write a .ply file (ASCII)
+### Read Binary `.ply`
+```ts
+import { readBinaryPly } from 'plyjs';
+import fs from 'fs';
+const buffer = fs.readFileSync('mesh.ply');
+const ply = readBinaryPly(buffer);
+```
 
+### Write ASCII `.ply`
 ```ts
 import { writePly } from 'plyjs';
-import fs from 'fs';
-
-const data = {
-  x: new Float32Array([0, 1, 2]),
-  y: new Float32Array([0, 0, 0]),
-  z: new Float32Array([0, 1, 0]),
-};
-
-const ply = PlyData.from({
-  vertex: {
-    x: data.x,
-    y: data.y,
-    z: data.z,
-  },
-});
-
-const content = writePly(ply);
-fs.writeFileSync('out.ply', content);
+// writePly writes to a stream or custom writer (see API docs)
 ```
 
-### Write a .ply file (Binary)
-
+### Write Binary `.ply`
 ```ts
 import { writeBinaryPly } from 'plyjs';
 const binary = writeBinaryPly(ply);
-fs.writeFileSync('out-binary.ply', binary);
+// fs.writeFileSync('out-binary.ply', binary);
 ```
