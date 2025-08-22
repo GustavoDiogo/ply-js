@@ -119,7 +119,10 @@ export class PlyHeaderLines implements Iterable<string> {
     this.lenNl = this.nl.length;
   }
 
-  private decode(x: Buffer | string): string { return typeof x === 'string' ? x : x.toString('ascii'); }
+  private decode(x: Buffer | string | null | undefined): string {
+    if (x === null || x === undefined) return '';
+    return typeof x === 'string' ? x : x.toString('ascii');
+  }
 
   *[Symbol.iterator](): Iterator<string> {
     while (!this.done) {

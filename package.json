@@ -11,7 +11,11 @@
     }
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc -p tsconfig.build.json",
+    "build:examples": "tsc -p tsconfig.examples.json",
+    "example:build": "pnpm build:examples",
+    "example:run": "node dist/examples/avatar-clothing-example.js",
+    "example": "pnpm example:build && pnpm example:run",
     "test:cov": "NODE_OPTIONS=--max-old-space-size=4096 APP_ENV=local jest --coverage --coverageReporters=lcov --coverageReporters=json-summary --coverageReporters=text --runInBand",
     "prepublishOnly": "npm run build"
   },
@@ -43,6 +47,7 @@
   },
   "files": [
     "dist",
+    "src/examples",
     "README.md"
   ]
 }

@@ -12,13 +12,21 @@ A modern TypeScript library for reading and writing `.ply` 3D mesh files (ASCII 
 
 ## Basic Usage
 
+
 ### Read ASCII `.ply`
 ```ts
 import { readPlyFromLines } from 'plyjs';
 import fs from 'fs';
 const lines = fs.readFileSync('mesh.ply', 'utf-8').split(/\r?\n/);
 const ply = readPlyFromLines(lines);
+
+// Access vertices and faces (polygons)
+const vertices = ply.elements.find(e => e.name === 'vertex')?.data;
+const faces = ply.elements.find(e => e.name === 'face' || e.name === 'polygon')?.data;
+console.log('Number of vertices:', vertices?.length);
+console.log('Number of faces:', faces?.length);
 ```
+
 
 ### Read Binary `.ply`
 ```ts
@@ -26,6 +34,12 @@ import { readBinaryPly } from 'plyjs';
 import fs from 'fs';
 const buffer = fs.readFileSync('mesh.ply');
 const ply = readBinaryPly(buffer);
+
+// Access vertices and faces (polygons)
+const vertices = ply.elements.find(e => e.name === 'vertex')?.data;
+const faces = ply.elements.find(e => e.name === 'face' || e.name === 'polygon')?.data;
+console.log('Number of vertices:', vertices?.length);
+console.log('Number of faces:', faces?.length);
 ```
 
 ### Write ASCII `.ply`

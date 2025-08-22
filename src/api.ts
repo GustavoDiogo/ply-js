@@ -56,3 +56,26 @@ export async function writePly(writer: { write: (chunk: string) => any }, ply: P
     }
   }
 }
+
+/**
+ * Return an object mapping element name -> PlyElement for convenient access.
+ */
+export function elementMap(ply: PlyData): Record<string, PlyElement> {
+  return Object.fromEntries(ply.elements.map(e => [e.name, e]));
+}
+
+/**
+ * Extract common metadata (num vertices, num faces, format, elements list)
+ * This mirrors the convenience of python-plyfile's PlyData accessors.
+ */
+export function extractMetadata(ply: PlyData) {
+  const map = elementMap(ply);
+  const vertex = map['vertex'];
+  const face = map['face'] ?? map['polygon'];
+  return {
+  numVertices: vertex ? vertex.data.length : 0,
+  numFaces: face ? face.data.length : 0,
+  format: ply.text ? 'ascii' : 'binary',
+  elements: ply.elements.map(e => e.name),
+  };
+}
