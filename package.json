@@ -16,8 +16,11 @@
     "example:build": "pnpm build:examples",
     "example:run": "node dist/examples/avatar-clothing-example.all.js",
     "example": "pnpm example:build && pnpm example:run",
+    "example:dev": "ts-node --project tsconfig.examples.json examples/avatar-clothing-example.all.ts",
+    "test": "jest",
     "test:cov": "NODE_OPTIONS=--max-old-space-size=4096 APP_ENV=local jest --coverage --coverageReporters=lcov --coverageReporters=json-summary --coverageReporters=text --runInBand",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "prepare": "npm run build"
   },
   "repository": {
     "type": "git",

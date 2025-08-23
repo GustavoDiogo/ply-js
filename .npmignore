@@ -1,0 +1,15 @@
+# npm ignore defaults: node_modules, .git, etc are ignored automatically
+# Explicitly ignore source, examples, samples and tests
+src/
+examples/
+samples/
+__tests__/
+coverage/
+*.log
+*.ts
+tsconfig.*.json
+jest.config.ts
+.gitignore
+.pnpm-debug.log
+.pnpm-debug.log.*
+.DS_Store
