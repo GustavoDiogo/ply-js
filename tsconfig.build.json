@@ -10,7 +10,7 @@
     "node_modules",
     "dist",
     "src/__tests__",
-    "src/examples",
-    "src/samples"
+    "samples",
+    "examples"
   ]
 }
