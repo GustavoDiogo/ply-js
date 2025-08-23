@@ -1,6 +1,6 @@
 {
   "name": "ply-js",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "A TypeScript port based on python-plyfile for reading and writing .ply files",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
