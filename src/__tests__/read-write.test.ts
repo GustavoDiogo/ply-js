@@ -1,9 +1,20 @@
 import { readFileSync, readdirSync } from 'fs';
-import { join } from 'path';
+import { join, basename } from 'path';
 import { readPly, readPlyFromLines, writePly } from '../';
 import { PlyData } from '../data';
 import { asyncLinesFromString } from './helpers';
 import assert from 'node:assert/strict';
+
+function findPlyFiles(dir: string): string[] {
+  const entries = readdirSync(dir, { withFileTypes: true });
+  const results: string[] = [];
+  for (const e of entries) {
+    const p = join(dir, e.name);
+    if (e.isDirectory()) results.push(...findPlyFiles(p));
+    else if (e.isFile() && e.name.toLowerCase().endsWith('.ply')) results.push(p);
+  }
+  return results;
+}
 
 describe('PLY Read/Write (ASCII)', () => {
   const plyText = `
@@ -50,10 +61,10 @@ end_header
 
 describe('PLY Read/Write (real files in samples)', () => {
   const samplesDir = join(__dirname, '..', '..', 'samples');
-  const files = readdirSync(samplesDir).filter(f => f.endsWith('.ply'));
+  const files = findPlyFiles(samplesDir);
 
-  for (const file of files) {
-    const filePath = join(samplesDir, file);
+  for (const filePath of files) {
+    const file = basename(filePath);
 
     it(`parses ${file} as ASCII (if possible)`, () => {
       try {
@@ -102,9 +113,9 @@ end_header
 
   it('roundtrips ASCII samples via readPly + writePly', async () => {
     const samplesDir = join(__dirname, '..', '..', 'samples');
-    const files = readdirSync(samplesDir).filter(f => f.endsWith('.ply'));
-    for (const file of files) {
-      const filePath = join(samplesDir, file);
+    const files = findPlyFiles(samplesDir);
+    for (const filePath of files) {
+      const file = basename(filePath);
       try {
         const content = readFileSync(filePath, 'utf-8');
         // only try ASCII roundtrip when file is readable as UTF-8
@@ -126,9 +137,9 @@ end_header
 
   it('roundtrips binary samples via PlyData.read + writePly', async () => {
     const samplesDir = join(__dirname, '..', '..', 'samples');
-    const files = readdirSync(samplesDir).filter(f => f.endsWith('.ply'));
-    for (const file of files) {
-      const filePath = join(samplesDir, file);
+    const files = findPlyFiles(samplesDir);
+    for (const filePath of files) {
+      const file = basename(filePath);
       try {
         const ply = PlyData.read(filePath);
         let result = '';
@@ -197,10 +208,10 @@ end_header
 
   it('extracts header metadata from sample files (if present)', () => {
     const samplesDir = join(__dirname, '..', '..', 'samples');
-    const files = readdirSync(samplesDir).filter(f => f.endsWith('.ply'));
+    const files = findPlyFiles(samplesDir);
 
-    for (const file of files) {
-      const filePath = join(samplesDir, file);
+    for (const filePath of files) {
+      const file = basename(filePath);
       try {
         const content = readFileSync(filePath, 'utf-8');
         const lines = content.split(/\r?\n/);
@@ -236,10 +247,10 @@ end_header
 
   it('preserves sample file metadata when writing (if present)', async () => {
     const samplesDir = join(__dirname, '..', '..', 'samples');
-    const files = readdirSync(samplesDir).filter(f => f.endsWith('.ply'));
+    const files = findPlyFiles(samplesDir);
 
-    for (const file of files) {
-      const filePath = join(samplesDir, file);
+    for (const filePath of files) {
+      const file = basename(filePath);
       try {
         const content = readFileSync(filePath, 'utf-8');
         const lines = content.split(/\r?\n/);

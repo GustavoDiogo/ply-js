@@ -1,6 +1,6 @@
 {
   "name": "ply-js",
-  "version": "0.1.0",
+  "version": "0.0.0",
   "description": "A TypeScript port based on python-plyfile for reading and writing .ply files",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -14,7 +14,7 @@
     "build": "tsc -p tsconfig.build.json",
     "build:examples": "tsc -p tsconfig.examples.json",
     "example:build": "pnpm build:examples",
-    "example:run": "node dist/examples/avatar-clothing-example.js",
+    "example:run": "node dist/examples/avatar-clothing-example.all.js",
     "example": "pnpm example:build && pnpm example:run",
     "test:cov": "NODE_OPTIONS=--max-old-space-size=4096 APP_ENV=local jest --coverage --coverageReporters=lcov --coverageReporters=json-summary --coverageReporters=text --runInBand",
     "prepublishOnly": "npm run build"
@@ -47,7 +47,7 @@
   },
   "files": [
     "dist",
-    "src/examples",
-    "README.md"
+    "README.md",
+    "COPYING"
   ]
 }
