@@ -55,6 +55,10 @@ export class PlyProperty {
 
   _readBin(view: Buffer, offset: number, byteOrder: ByteOrder): { value: PlyScalar | PlyList; next: number } {
     const code = this._valDtypeCode;
+    if (process.env.PLY_DEBUG === '1') {
+      // eslint-disable-next-line no-console
+      console.debug(`PlyProperty._readBin: prop=${this._name} code=${code} offset=${offset} byteOrder=${byteOrder}`);
+    }
     const { values, next } = readArray(view, offset, 1, code, byteOrder);
     if (values.length < 1) throw new Error('StopIteration');
     return { value: values[0] as PlyScalar, next };
@@ -112,6 +116,10 @@ export class PlyListProperty extends PlyProperty {
 
   _readListAndAdvance(view: Buffer, offset: number, byteOrder: ByteOrder): { list: number[]; next: number } {
     const [lenCode, valCode] = this.listDtype(byteOrder);
+    if (process.env.PLY_DEBUG === '1') {
+      // eslint-disable-next-line no-console
+      console.debug(`PlyListProperty._readListAndAdvance: prop=${this.name} lenCode=${lenCode} valCode=${valCode} offset=${offset}`);
+    }
     const lenRead = readArray(view, offset, 1, lenCode.slice(1), byteOrder);
     if (lenRead.values.length < 1) throw new Error('StopIteration');
     const n = lenRead.values[0];

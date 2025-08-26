@@ -8,27 +8,45 @@ import { byteOrderMap } from './utils';
  * This is the root-level implementation previously living under src/core.
  */
 export function readBinaryPly(buffer: Buffer): PlyData {
-  const ascii = buffer.toString('ascii');
-  const idx = ascii.indexOf('\nend_header');
-  if (idx === -1) throw new Error('no end_header in buffer');
-  // include the line containing 'end_header' and following newline
-  const headerEnd = ascii.indexOf('\n', idx + 1) + 1;
-  const headerText = ascii.slice(0, headerEnd);
-  const headerLines = headerText.split(/\r?\n/).filter(Boolean);
-  const parser = new PlyHeaderParser(headerLines.slice(1));
+  // Use a buffer-backed reader so we correctly locate the header end without relying on ascii search
+  let offset = 0;
+  const rawReader = { read(n: number): Buffer | null {
+    if (offset >= buffer.length) return null;
+    const end = Math.min(offset + n, buffer.length);
+    const chunk = buffer.slice(offset, end);
+    offset = end;
+    return chunk;
+  } };
+
+  const reader = { read(n: number): Buffer | string { const r = rawReader.read(n); return r === null ? '' : r; } };
+
+  const headerLines: string[] = [];
+  // collect header lines using PlyHeaderLines
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { PlyHeaderLines } = require('./header');
+  for (const l of new PlyHeaderLines(reader)) headerLines.push(l);
+
+  const headerEnd = offset; // reader advanced past header
+  // parser expects lines after the initial 'ply' line
+  const parser = new PlyHeaderParser(headerLines);
 
   const elements = parser.elements.map(e => new PlyElement(e.name, e.properties, e.count, e.comments));
   const pd = new PlyData(elements, parser.format === 'ascii', (byteOrderMap as any)[parser.format as string] ?? '=', parser.comments, parser.objInfo);
 
   const dataBuf = buffer.subarray(headerEnd);
 
+  let cursor = 0;
   for (const elt of pd.elements) {
-    // let each element parse from the buffer. Element._read will throw if insufficient data.
     if (pd.text) {
-      // ASCII: pass the data as UTF-8 string buffer
-      (elt as any)._read(Buffer.from(dataBuf.toString('utf8')), true, pd.byteOrder, undefined, {});
+      // ASCII: slice lines for this element
+      const s = dataBuf.subarray(cursor).toString('utf8');
+      (elt as any)._read(Buffer.from(s, 'utf8'), true, pd.byteOrder, undefined, {});
+      // we don't advance cursor for ASCII (we passed full tail each time)
     } else {
-      (elt as any)._read(dataBuf, false, pd.byteOrder, undefined, {});
+      const bufSlice = dataBuf.subarray(cursor);
+      const consumed = (elt as any)._read(bufSlice, false, pd.byteOrder, undefined, {});
+      if (typeof consumed !== 'number') throw new Error(`element ${elt.name} did not return consumed byte count`);
+      cursor += consumed;
     }
   }
 

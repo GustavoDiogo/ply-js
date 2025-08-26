@@ -58,7 +58,8 @@ export class PlyElement {
     return lines.join('\n');
   }
 
-  _read(stream: Buffer, isText: boolean, byteOrder: ByteOrder, _mmap?: any, knownListLen: Record<string, number> = {}) {
+  // When reading binary, return the number of bytes consumed from the buffer
+  _read(stream: Buffer, isText: boolean, byteOrder: ByteOrder, _mmap?: any, knownListLen: Record<string, number> = {}): number | void {
     if (isText) return this._readTxt(stream.toString('utf8'));
     return this._readBin(stream, byteOrder);
   }
@@ -94,11 +95,22 @@ export class PlyElement {
     for (let k = 0; k < this.count; k++) {
       const rec: PlyRecord = {};
       for (const prop of this._properties) {
+        if (process.env.PLY_DEBUG === '1') {
+          try {
+            // eslint-disable-next-line no-console
+            console.debug(`PlyElement._readBin: element=${this._name} row=${k} prop=${prop.name} offset=${offset} bufferLen=${buffer.length}`);
+          } catch { /** ignore debug errors */ }
+        }
         if (prop instanceof PlyListProperty) {
           try {
             const { value, next } = prop._readBin(buffer, offset, bo);
             offset = next; rec[prop.name] = value;
           } catch {
+            // include more context when debugging
+            if (process.env.PLY_DEBUG === '1') {
+              // eslint-disable-next-line no-console
+              console.debug(`PlyElement._readBin: early EOF while reading list prop=${prop.name} at offset=${offset} element=${this._name} row=${k}`);
+            }
             throw new PlyElementParseError('early end-of-file', this, k, prop);
           }
         } else {
@@ -106,12 +118,18 @@ export class PlyElement {
             const { value, next } = (prop as PlyProperty)._readBin(buffer, offset, bo);
             offset = next; rec[prop.name] = value;
           } catch {
+            if (process.env.PLY_DEBUG === '1') {
+              // eslint-disable-next-line no-console
+              console.debug(`PlyElement._readBin: early EOF while reading scalar prop=${prop.name} at offset=${offset} element=${this._name} row=${k}`);
+            }
             throw new PlyElementParseError('early end-of-file', this, k, prop as any);
           }
         }
       }
       this.data[k] = rec;
     }
+  // return number of bytes consumed from buffer
+  return offset;
   }
 
   _write(streams: { push: (buf: Buffer | string) => void }, isText: boolean, byteOrder: ByteOrder) {

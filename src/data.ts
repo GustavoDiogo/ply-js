@@ -69,41 +69,83 @@ export class PlyData implements Iterable<PlyElement> {
 
   static read(pathOrStream: string | fs.ReadStream, opts: ReadOptions = {}): PlyData {
     const mustClose = typeof pathOrStream === 'string';
-    const stream = typeof pathOrStream === 'string' ? fs.createReadStream(pathOrStream) : pathOrStream;
-
     try {
-      // Read entire header and then the remaining bytes (payload) for each element.
-      const headerParsed = PlyData._parseHeader(stream as fs.ReadStream);
-      const chunks: Buffer[] = [];
-      // after header parser returns, the underlying stream sits at first data byte
-      stream.on('data', (c: Buffer | string) => chunks.push(typeof c === 'string' ? Buffer.from(c) : c));
-      // NOTE: in synchronous style, we need to block; but Node streams are async.
-      // For simplicity in this port, we read the rest synchronously via fs.readFileSync when given a path.
       if (typeof pathOrStream === 'string') {
         const file = fs.readFileSync(pathOrStream);
-        // Find the end of header by searching for '\nend_header' and next newline
-        const ascii = file.toString('ascii');
-        const idx = ascii.indexOf('\nend_header');
-        const headerEnd = ascii.indexOf('\n', idx + 1) + 1; // include trailing NL
-        const dataBuf = file.subarray(headerEnd);
-        for (const elt of headerParsed) {
-          if (headerParsed.text) {
-            // Take first 'count' lines as ASCII rows for this element
-            const s = dataBuf.toString('utf8');
-            // The element reader will slice internally
-            (elt as any)._read(Buffer.from(s, 'utf8'), true, headerParsed.byteOrder, opts.mmap, opts.knownListLen?.[elt.name] || {});
-          } else {
-            (elt as any)._read(dataBuf, false, headerParsed.byteOrder, opts.mmap, opts.knownListLen?.[elt.name] || {});
+
+        // buffer-backed reader that tracks offset consumed by PlyHeaderLines
+        let offset = 0;
+        const rawReader = { read(n: number): Buffer | null {
+          if (offset >= file.length) return null;
+          const end = Math.min(offset + n, file.length);
+          const chunk = file.slice(offset, end);
+          offset = end;
+          return chunk;
+        } };
+
+        // PlyHeaderLines expects a reader returning string|Buffer; adapter converts null->''
+        const reader = { read(n: number): Buffer | string { const r = rawReader.read(n); return r === null ? '' : r; } };
+
+        // Use PlyHeaderLines against our buffer reader to reliably parse header
+        const headerLines: string[] = [];
+        for (const line of new PlyHeaderLines(reader)) headerLines.push(line);
+        const parser = new PlyHeaderParser(headerLines);
+
+  const elements = parser.elements.map(e => new PlyElement(e.name, e.properties, e.count, e.comments));
+  const headerParsed = new PlyData(elements, parser.format === 'ascii', byteOrderMap[parser.format!], parser.comments, parser.objInfo);
+
+  const dataBuf = file.subarray(offset);
+  // debug: show header offset, header lines and element summaries
+  // eslint-disable-next-line no-console
+  console.error('DEBUG header offset=', offset);
+  // eslint-disable-next-line no-console
+  console.error('DEBUG headerLines[0..5]=', headerLines.slice(0,6));
+  // eslint-disable-next-line no-console
+  console.error('DEBUG parsed elements=', headerParsed.elements.map(e=>({name:e.name,count:e.count,props:e.properties.map((p:any)=>p.name)})));
+  // eslint-disable-next-line no-console
+  console.error('DEBUG dataBuf length=', dataBuf.length, 'first32=', dataBuf.slice(0,32).toString('hex'));
+        // debug: estimate expected bytes per element (scalar-only elements)
+        try {
+          const sizes: Record<string, number> = { i1:1,u1:1,i2:2,u2:2,i4:4,u4:4,f4:4,f8:8 };
+          const per = headerParsed.elements.map(e=>{
+            const hasList = e.properties.some((p:any)=> p.constructor && p.constructor.name === 'PlyListProperty');
+            if (hasList) return { name: e.name, count: e.count, estBytes: null, hasList: true };
+            let rowBytes = 0;
+            for (const p of e.properties) {
+              const code = (p as any).valDtype as string;
+              rowBytes += sizes[code];
+            }
+            return { name: e.name, count: e.count, estBytes: rowBytes * e.count, hasList: false };
+          });
+          // eslint-disable-next-line no-console
+          console.error('DEBUG expected per-element bytes=', per);
+        } catch (e) { /* ignore */ }
+
+        if (headerParsed.text) {
+          const s = dataBuf.toString('utf8');
+          const lines = s.split(/\r?\n/).filter(Boolean);
+          let lineCursor = 0;
+          for (const elt of headerParsed) {
+            const need = elt.count;
+            const slice = lines.slice(lineCursor, lineCursor + need).join('\n') + '\n';
+            (elt as any)._read(Buffer.from(slice, 'utf8'), true, headerParsed.byteOrder, opts.mmap, opts.knownListLen?.[elt.name] || {});
+            lineCursor += need;
+          }
+        } else {
+          let cursor = 0;
+          for (const elt of headerParsed) {
+            const bufSlice = dataBuf.subarray(cursor);
+            const consumed = (elt as any)._read(bufSlice, false, headerParsed.byteOrder, opts.mmap, opts.knownListLen?.[elt.name] || {});
+            if (typeof consumed !== 'number') throw new Error(`element ${elt.name} did not return consumed byte count`);
+            cursor += consumed;
           }
         }
-      } else {
-        throw new Error('Readable stream version of read() not implemented in this minimal port. Provide a filename path.');
+
+        return headerParsed;
       }
-      return headerParsed;
+      throw new Error('Readable stream version of read() not implemented in this minimal port. Provide a filename path.');
     } finally {
-      if (mustClose && typeof pathOrStream === 'string') {
-        // FS readFileSync closed handle automatically; nothing to do
-      }
+      // nothing to close for readFileSync
     }
   }
 
