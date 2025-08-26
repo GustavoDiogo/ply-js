@@ -27,4 +27,3 @@ export * from './data';
 export * from './api';
 export * from './header';
 export * from './measurements';
-export { measureAvatarFromPoints } from './measurements/size';

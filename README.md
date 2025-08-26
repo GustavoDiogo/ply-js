@@ -1,92 +1,97 @@
 # ply-js
 
-A compact, strongly-typed TypeScript library to read, write and analyze PLY (Polygon File Format) 3D meshes. Inspired by python-plyfile and focused on practical utilities for avatar and mesh processing: parsing, serialization, volume estimation, axis-aligned bounds and simple sizing helpers.
+ply-js is an npm package and a compact, strongly-typed TypeScript library for reading, writing and analyzing PLY (Polygon File Format) 3D meshes. The project is inspired by — and includes ideas and behavior ported from — the python-plyfile library.
+
+This repository focuses on robust PLY parsing (ASCII and binary) and a small set of practical mesh utilities useful for analytics, engineering and tooling workflows.
 
 ## Highlights
 
-- Parse ASCII and binary `.ply` files (vertex and face elements)
-- Read/write helpers for ASCII and binary PLY
-- Measurement helpers: axis-aligned bounding box (AABB), centroid, cross-section circumference, volume estimate and mass estimate
-- Lightweight, fully typed TypeScript API
-- Package published with only runtime artifacts (dist)
+- Full support for ASCII and common binary PLY encodings (little/big-endian)
+- Read/write helpers for PLY headers and element data
+- Measurement primitives: axis-aligned bounding box (AABB), centroid, cross-section perimeter, volume estimation and related helpers
+- Lightweight, fully-typed TypeScript API with runtime artifacts compiled to `dist`
 
+## Example usage (concise)
 
-## Quickstart
-
-Read an ASCII `.ply` from lines:
+Read an ASCII PLY provided as lines:
 
 ```ts
 import { readPlyFromLines } from 'ply-js';
-import fs from 'fs';
-const lines = fs.readFileSync('mesh.ply', 'utf8').split(/\r?\n/);
+// lines: string[]
 const ply = readPlyFromLines(lines);
-const vertices = ply.elements.find(e => e.name === 'vertex')?.data;
-const faces = ply.elements.find(e => e.name === 'face' || e.name === 'polygon')?.data;
+const vertexElement = ply.elements.find(e => e.name === 'vertex');
+const faceElement = ply.elements.find(e => e.name === 'face' || e.name === 'polygon');
 ```
 
-Read a binary `.ply`:
+Read a binary PLY from a Buffer:
 
 ```ts
 import { readBinaryPly } from 'ply-js';
-import fs from 'fs';
-const buf = fs.readFileSync('mesh.ply');
+// buf: Buffer
 const ply = readBinaryPly(buf);
 ```
 
-Write utilities:
+Write helpers return either strings or Buffers depending on ascii/binary form:
 
 ```ts
 import { writePly, writeBinaryPly } from 'ply-js';
-// writePly(wallet) => ascii string or stream
+// writePly(ply) => string
 // writeBinaryPly(ply) => Buffer
 ```
 
+## Measurement helpers (selected)
 
-## Measurement & analysis
+- computeAABB(points) — axis-aligned bounding box from points
+- computeCentroid(points) — centroid of a point set
+- computeVolumeFromFaces(points, faces) — approximate closed-mesh volume via triangle integration
+- computeCrossSectionCircumference(points, y, thickness?) — perimeter of horizontal cross-section
 
-Primary helpers for estimating physical quantities from meshes:
+These helpers are intentionally small, composable building blocks for higher-level analysis and tooling.
 
-- measureAvatarFromPoints(points, faces?, system?, options?)
-  - points: Array of [x,y,z] coordinates
-  - faces: optional face records (arrays or objects with vertex indices) used for accurate volume estimates
-  - system: 'US' | 'BR' | 'EURO' (controls sizing labels)
-  - options: { sex?: 'male'|'female'|'other' }
-  - returns height (m), heightCentimeters, volumeM3, massKg, aabb, centroid and sizing suggestions (shirt/pants/shoe)
+## Calibration
 
-- computeVolumeFromFaces(points, faces)
-  - triangulates faces and computes absolute mesh volume (m^3) — use when faces are available for best accuracy
+This project includes a per-scanner calibration workflow to improve height and
+mass estimates when you have labeled scans (true height in meters and mass in
+kg). See `CALIBRATION.md` for full instructions and examples.
 
-- computeCrossSectionCircumference(points, y, thickness?)
-  - computes a horizontal cross-section perimeter at height y (useful for chest/waist estimates)
+Quick commands:
 
-Notes
-- The measurement helpers detect and normalize common source units (mm, cm, m) using the computed height and scale the point cloud to meters before computing volume and circumferences.
-- Volume-based mass uses a configurable density (default ≈ 985 kg/m^3) to produce a reasonable mass estimate for human-like meshes.
+```bash
+pnpm calibrate        # run examples/calibrate.ts to create a calibration JSON
+pnpm apply:calibration # run examples/apply-calibration.ts to demonstrate applying a saved calibration
+```
 
+Programmatic usage: pass a calibration object to `estimateMass`, e.g.:
+
+```ts
+const res = estimateMass(points, faces, { calibration: myCalibrationObj });
+```
 
 ## API surface (selected)
 
-- readPlyFromLines(lines)
-- readBinaryPly(buffer)
-- writePly(ply)
-- writeBinaryPly(ply)
-- measureAvatarFromPoints(points, faces?, system?, options?)
-- computeVolumeFromFaces(points, faces)
-- computeCrossSectionCircumference(points, y, thickness?)
-- computeAABB(points)
-- computeCentroid(points)
+- readPlyFromLines(lines: string[]): PlyDocument
+- readBinaryPly(buffer: Buffer): PlyDocument
+- writePly(ply: PlyDocument): string
+- writeBinaryPly(ply: PlyDocument): Buffer
+- computeAABB(points: Point[]): AABB
+- computeCentroid(points: Point[]): Point
+- computeVolumeFromFaces(points: Point[], faces: Face[]): number
 
+Refer to the generated API typings in `dist`/`src` for complete signatures.
 
-## Publishing notes
+## Packaging & publishing notes
 
-This repository keeps examples and raw sample data out of the published npm package intentionally. The package.json `files` array contains only the compiled `dist`, `README.md` and `COPYING` to protect private examples. If you operate a private or commercial offering, keep the source examples out of any public registry and use a private registry or private repository for non-public assets.
+This project is prepared for npm publishing. The published package intentionally contains only runtime artifacts (compiled `dist`), `README.md` and `COPYING` to avoid shipping private examples or sample data. Keep any private sample datasets or large example assets out of the package and use a private registry or separate repository for non-public content.
 
+## Porting note
+
+Design and behavior are influenced by the python-plyfile project; some parsing approaches and conventions are ported/adapted to TypeScript while aiming for a small, idiomatic API for Node.js and toolchains that consume compiled artifacts.
 
 ## License
 
-This project includes code under the original GPL-derived header and is packaged for distribution under MIT (see `COPYING` and `package.json` for license information).
+See `COPYING` and `package.json` for license details.
 
+## Contributing
 
-## Contributing / Support
+Issues, bug reports and focused pull requests are welcome. Prioritize clear tests for parsing edge cases (mixed ASCII/binary, unusual property lists, and face index encodings) and keep measurement helpers small and well-documented.
 
-For issues or questions, open an issue in the repository. Keep contributions focused on producing clear, well-tested parsing and measurement utilities; publishing decisions and distribution are intentional to protect example assets.

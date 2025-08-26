@@ -5,4 +5,3 @@ export * from './centroid';
 export * from './volume';
 export * from './crossSection';
 export * from './pca';
-export * from './size';

@@ -12,13 +12,16 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "build:examples": "tsc -p tsconfig.examples.json",
-    "example:build": "pnpm build:examples",
-    "example:run": "node dist/examples/avatar-clothing-example.all.js",
-    "example": "pnpm example:build && pnpm example:run",
-    "example:dev": "ts-node --project tsconfig.examples.json examples/avatar-clothing-example.all.ts",
-    "test": "jest",
-    "test:cov": "NODE_OPTIONS=--max-old-space-size=4096 APP_ENV=local jest --coverage --coverageReporters=lcov --coverageReporters=json-summary --coverageReporters=text --runInBand",
+    "example": "ts-node --project tsconfig.examples.json examples/simple-metrics.ts",
+    "run:example": "ts-node --project tsconfig.examples.json examples/simple-metrics.ts",
+    "example:dev": "npx ts-node examples/simple-metrics.ts",
+    "example:height": "ts-node --project tsconfig.examples.json examples/height.ts --full",
+    "example:weight": "ts-node --project tsconfig.examples.json examples/weight.ts --full",
+    "example:summary": "ts-node --project tsconfig.examples.json examples/summary.ts --full",
+    "calibrate": "ts-node --project tsconfig.examples.json examples/calibrate.ts",
+    "apply:calibration": "ts-node --project tsconfig.examples.json examples/apply-calibration.ts",
+  "test": "jest --config=jest.config.ts",
+  "test:cov": "NODE_OPTIONS=--max-old-space-size=4096 APP_ENV=local jest --config=jest.config.ts --coverage --coverageReporters=lcov --coverageReporters=json-summary --coverageReporters=text --runInBand",
     "prepublishOnly": "npm run build",
     "prepare": "npm run build"
   },
@@ -50,6 +53,7 @@
   },
   "files": [
     "dist",
+    "dist/__tests__",
     "README.md",
     "COPYING"
   ]
