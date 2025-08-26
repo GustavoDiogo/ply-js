@@ -80,14 +80,11 @@ export const typesList: string[] = (() => {
 })();
 
 export function lookupType(typeStr: string): string {
-  if (!(typeStr in dataTypeReverse)) {
-    const mapped = dataTypes[typeStr];
-    if (!mapped) {
-      throw new Error(`field type '${typeStr}' not in ${JSON.stringify(typesList)}`);
-    }
-    return dataTypeReverse[mapped];
-  }
-  return dataTypeReverse[typeStr];
+  // If the user provided a long name (e.g. 'float'), map to the short canonical code ('f4').
+  if (typeStr in dataTypes) return dataTypes[typeStr];
+  // If the user already provided a short code ('f4','i4', etc), accept it as-is.
+  if (typeStr in dataTypeReverse) return typeStr;
+  throw new Error(`field type '${typeStr}' not in ${JSON.stringify(typesList)}`);
 }
 
 export function checkName(name: string): void {
@@ -113,31 +110,52 @@ export function decodeAscii(bufOrStr: Buffer | string): string {
 }
 
 export function readArray(view: Buffer, offset: number, count: number, type: string, order: ByteOrder): { values: number[]; next: number } {
-  const dv = new DataView(view.buffer, view.byteOffset + offset, view.length - offset);
-  const little = order === '<' || (order === '=' && nativeByteOrder === '<');
-  let pos = 0;
-  const out: number[] = [];
-  const advance = (n: number) => { pos += n; };
-  const getter = (code: string) => {
-    switch (code) {
-      case 'i1': return () => (dv.getInt8(pos) as number); // 1
-      case 'u1': return () => (dv.getUint8(pos) as number);
-      case 'i2': return () => (dv.getInt16(pos, little) as number);
-      case 'u2': return () => (dv.getUint16(pos, little) as number);
-      case 'i4': return () => (dv.getInt32(pos, little) as number);
-      case 'u4': return () => (dv.getUint32(pos, little) as number);
-      case 'f4': return () => (dv.getFloat32(pos, little) as number);
-      case 'f8': return () => (dv.getFloat64(pos, little) as number);
-      default: throw new Error(`unsupported dtype '${code}'`);
-    }
-  };
-  const sizes: Record<string, number> = { i1: 1, u1: 1, i2: 2, u2: 2, i4: 4, u4: 4, f4: 4, f8: 8 };
-  const get = getter(type);
-  for (let i = 0; i < count; i++) {
-    out.push(get());
-    advance(sizes[type]);
+  // Use Buffer read helpers to avoid DataView/ArrayBuffer offset pitfalls.
+  // accept both short codes ('f4') and long names ('float')
+  if (!(type in dataTypeReverse) && (type in dataTypes)) {
+    type = dataTypes[type];
   }
-  return { values: out, next: offset + pos };
+  const little = order === '<' || (order === '=' && nativeByteOrder === '<');
+  if (process.env.PLY_DEBUG === '1') {
+    // eslint-disable-next-line no-console
+    console.error(`readArray: type=${type} offset=${offset} count=${count} bufLen=${view.length} order=${order}`);
+  }
+  const out: number[] = [];
+  const sizes: Record<string, number> = { i1: 1, u1: 1, i2: 2, u2: 2, i4: 4, u4: 4, f4: 4, f8: 8 };
+  let pos = offset;
+  for (let i = 0; i < count; i++) {
+  switch (type) {
+      case 'i1':
+        if (pos + 1 > view.length) throw new Error('StopIteration');
+        out.push(view.readInt8(pos)); pos += 1; break;
+      case 'u1':
+        if (pos + 1 > view.length) throw new Error('StopIteration');
+        out.push(view.readUInt8(pos)); pos += 1; break;
+      case 'i2':
+        if (pos + 2 > view.length) throw new Error('StopIteration');
+        out.push(little ? view.readInt16LE(pos) : view.readInt16BE(pos)); pos += 2; break;
+      case 'u2':
+        if (pos + 2 > view.length) throw new Error('StopIteration');
+        out.push(little ? view.readUInt16LE(pos) : view.readUInt16BE(pos)); pos += 2; break;
+      case 'i4':
+        if (pos + 4 > view.length) throw new Error('StopIteration');
+        out.push(little ? view.readInt32LE(pos) : view.readInt32BE(pos)); pos += 4; break;
+      case 'u4':
+        if (pos + 4 > view.length) throw new Error('StopIteration');
+        out.push(little ? view.readUInt32LE(pos) : view.readUInt32BE(pos)); pos += 4; break;
+      case 'f4':
+        if (pos + 4 > view.length) throw new Error('StopIteration');
+        out.push(little ? view.readFloatLE(pos) : view.readFloatBE(pos)); pos += 4; break;
+      case 'f8':
+        if (pos + 8 > view.length) {
+          if (process.env.PLY_DEBUG === '1') console.error(`readArray: early EOF when reading f8 at pos=${pos} bufLen=${view.length}`);
+          throw new Error('StopIteration');
+        }
+        out.push(little ? view.readDoubleLE(pos) : view.readDoubleBE(pos)); pos += 8; break;
+      default: throw new Error(`unsupported dtype '${type}'`);
+    }
+  }
+  return { values: out, next: pos };
 }
 
 export function writeArray(values: number[], type: string, order: ByteOrder): Buffer {
