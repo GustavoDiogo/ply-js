@@ -1,0 +1,32 @@
+import { PlyElement } from './element';
+import { ByteOrder, ReadOptions, WriteOptions } from './types';
+import fs from 'fs';
+export declare class PlyData implements Iterable<PlyElement> {
+    private _elements;
+    private _elementLookup;
+    private _comments;
+    private _objInfo;
+    private _text;
+    private _byteOrder;
+    constructor(elements?: PlyElement[], text?: boolean, byteOrder?: ByteOrder, comments?: string[], objInfo?: string[]);
+    get elements(): PlyElement[];
+    set elements(v: PlyElement[]);
+    get text(): boolean;
+    set text(v: boolean);
+    get byteOrder(): ByteOrder;
+    set byteOrder(v: ByteOrder);
+    get comments(): string[];
+    set comments(v: string[]);
+    get objInfo(): string[];
+    set objInfo(v: string[]);
+    private _index;
+    static _parseHeader(stream: fs.ReadStream): PlyData;
+    static read(pathOrStream: string | fs.ReadStream, opts?: ReadOptions): PlyData;
+    write(pathOrStream: string | fs.WriteStream, _opts?: WriteOptions): void;
+    get header(): string;
+    [Symbol.iterator](): Iterator<PlyElement>;
+    get length(): number;
+    has(name: string): boolean;
+    get(name: string): PlyElement;
+    toString(): string;
+}
