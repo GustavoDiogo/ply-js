@@ -2,7 +2,7 @@
 
 [![GitHub license](https://img.shields.io/badge/license-GPLv3-blue.svg)](https://github.com/GustavoDiogo/ply-js/blob/main/COPYING) [![npm version](https://img.shields.io/npm/v/ply-js.svg?style=flat)](https://www.npmjs.com/package/ply-js) [![(Runtime) Build and Test](https://github.com/GustavoDiogo/ply-js/actions/workflows/runtime_build_and_test.yml/badge.svg)](https://github.com/GustavoDiogo/ply-js/actions/workflows/runtime_build_and_test.yml) [![(Compiler) TypeScript](https://github.com/GustavoDiogo/ply-js/actions/workflows/compiler_typescript.yml/badge.svg?branch=main)](https://github.com/GustavoDiogo/ply-js/actions/workflows/compiler_typescript.yml) [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/GustavoDiogo/ply-js/blob/main/CONTRIBUTING.md)
 
-Compact, strongly-typed TypeScript utilities for reading, writing and measuring PLY 3D meshes.
+A compact, strongly-typed TypeScript library to read, write and analyze PLY (Polygon File Format) 3D meshes. Inspired by python-plyfile and focused on practical utilities for avatar and mesh processing: parsing, serialization, volume estimation, axis-aligned bounds and simple sizing helpers.
 
 ## Features
 
