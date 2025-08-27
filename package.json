@@ -1,6 +1,6 @@
 {
   "name": "ply-js",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "A TypeScript port based on python-plyfile for reading and writing .ply files",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -20,8 +20,8 @@
     "example:summary": "ts-node --project tsconfig.examples.json examples/summary.ts --full",
     "calibrate": "ts-node --project tsconfig.examples.json examples/calibrate.ts",
     "apply:calibration": "ts-node --project tsconfig.examples.json examples/apply-calibration.ts",
-  "test": "jest --config=jest.config.ts",
-  "test:cov": "NODE_OPTIONS=--max-old-space-size=4096 APP_ENV=local jest --config=jest.config.ts --coverage --coverageReporters=lcov --coverageReporters=json-summary --coverageReporters=text --runInBand",
+    "test": "jest --config=jest.config.ts",
+    "test:cov": "NODE_OPTIONS=--max-old-space-size=4096 APP_ENV=local jest --config=jest.config.ts --coverage --coverageReporters=lcov --coverageReporters=json-summary --coverageReporters=text --runInBand",
     "prepublishOnly": "npm run build",
     "prepare": "npm run build"
   },
@@ -38,7 +38,7 @@
     "typescript"
   ],
   "author": "GustavoDiogo",
-  "license": "MIT",
+  "license": "GPL-3.0-or-later",
   "bugs": {
     "url": "https://github.com/GustavoDiogo/ply-js/issues"
   },

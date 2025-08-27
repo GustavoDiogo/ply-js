@@ -1,97 +1,61 @@
 # ply-js
 
-ply-js is an npm package and a compact, strongly-typed TypeScript library for reading, writing and analyzing PLY (Polygon File Format) 3D meshes. The project is inspired by — and includes ideas and behavior ported from — the python-plyfile library.
+[![GitHub license](https://img.shields.io/badge/license-GPLv3-blue.svg)](https://github.com/GustavoDiogo/ply-js/blob/main/COPYING) [![npm version](https://img.shields.io/npm/v/ply-js.svg?style=flat)](https://www.npmjs.com/package/ply-js) [![(Runtime) Build and Test](https://github.com/GustavoDiogo/ply-js/actions/workflows/runtime_build_and_test.yml/badge.svg)](https://github.com/GustavoDiogo/ply-js/actions/workflows/runtime_build_and_test.yml) [![(Compiler) TypeScript](https://github.com/GustavoDiogo/ply-js/actions/workflows/compiler_typescript.yml/badge.svg?branch=main)](https://github.com/GustavoDiogo/ply-js/actions/workflows/compiler_typescript.yml) [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/GustavoDiogo/ply-js/blob/main/CONTRIBUTING.md)
 
-This repository focuses on robust PLY parsing (ASCII and binary) and a small set of practical mesh utilities useful for analytics, engineering and tooling workflows.
+Compact, strongly-typed TypeScript utilities for reading, writing and measuring PLY 3D meshes.
 
-## Highlights
+## Features
 
-- Full support for ASCII and common binary PLY encodings (little/big-endian)
-- Read/write helpers for PLY headers and element data
-- Measurement primitives: axis-aligned bounding box (AABB), centroid, cross-section perimeter, volume estimation and related helpers
-- Lightweight, fully-typed TypeScript API with runtime artifacts compiled to `dist`
+- Full support for ASCII and common binary PLY encodings (little/big-endian).
+- Read/write helpers for PLY headers and element data.
+- Measurement helpers: AABB, centroid, cross-section perimeter, multiple volume estimators, and related utilities.
+- High-level estimate helpers including per-scanner calibration support and an avatar/BMI estimation path.
 
-## Example usage (concise)
+## Quick example
 
 Read an ASCII PLY provided as lines:
 
 ```ts
 import { readPlyFromLines } from 'ply-js';
-// lines: string[]
+
 const ply = readPlyFromLines(lines);
 const vertexElement = ply.elements.find(e => e.name === 'vertex');
 const faceElement = ply.elements.find(e => e.name === 'face' || e.name === 'polygon');
 ```
 
-Read a binary PLY from a Buffer:
+Estimate mass programmatically (with an optional calibration object):
 
 ```ts
-import { readBinaryPly } from 'ply-js';
-// buf: Buffer
-const ply = readBinaryPly(buf);
+import { estimateMass } from 'ply-js';
+
+const result = estimateMass(points, faces, { objectType: 'avatar', calibration: myCalibration });
+console.log(result.massKg, result.heightM);
 ```
-
-Write helpers return either strings or Buffers depending on ascii/binary form:
-
-```ts
-import { writePly, writeBinaryPly } from 'ply-js';
-// writePly(ply) => string
-// writeBinaryPly(ply) => Buffer
-```
-
-## Measurement helpers (selected)
-
-- computeAABB(points) — axis-aligned bounding box from points
-- computeCentroid(points) — centroid of a point set
-- computeVolumeFromFaces(points, faces) — approximate closed-mesh volume via triangle integration
-- computeCrossSectionCircumference(points, y, thickness?) — perimeter of horizontal cross-section
-
-These helpers are intentionally small, composable building blocks for higher-level analysis and tooling.
 
 ## Calibration
 
-This project includes a per-scanner calibration workflow to improve height and
-mass estimates when you have labeled scans (true height in meters and mass in
-kg). See `CALIBRATION.md` for full instructions and examples.
-
-Quick commands:
+Per-scanner calibrations are supported and persisted as JSON. See `CALIBRATION.md` for instructions. Example scripts live in `examples/` and are runnable via the package scripts.
 
 ```bash
 pnpm calibrate        # run examples/calibrate.ts to create a calibration JSON
 pnpm apply:calibration # run examples/apply-calibration.ts to demonstrate applying a saved calibration
 ```
 
-Programmatic usage: pass a calibration object to `estimateMass`, e.g.:
+## Selected API
 
-```ts
-const res = estimateMass(points, faces, { calibration: myCalibrationObj });
-```
+- `readPlyFromLines(lines: string[]): PlyDocument`
+- `readBinaryPly(buffer: Buffer): PlyDocument`
+- `writePly(ply: PlyDocument): string`
+- `writeBinaryPly(ply: PlyDocument): Buffer`
+- `computeAABB(points: Point[]): AABB`
+- `computeCentroid(points: Point[]): Point`
+- `computeVolumeFromFaces(points: Point[], faces: Face[]): number`
+- `estimateMass(points, faces, opts?): { massKg, heightM, volumes }`
 
-## API surface (selected)
+Refer to the `dist` typings and `src` files for full signatures and examples.
 
-- readPlyFromLines(lines: string[]): PlyDocument
-- readBinaryPly(buffer: Buffer): PlyDocument
-- writePly(ply: PlyDocument): string
-- writeBinaryPly(ply: PlyDocument): Buffer
-- computeAABB(points: Point[]): AABB
-- computeCentroid(points: Point[]): Point
-- computeVolumeFromFaces(points: Point[], faces: Face[]): number
+## Contributing & License
 
-Refer to the generated API typings in `dist`/`src` for complete signatures.
+See `CONTRIBUTING.md` for contribution guidelines. This project is licensed under the GNU General Public License v3 (GPL-3.0-or-later) — see `COPYING` and `package.json` for details.
 
-## Packaging & publishing notes
-
-This project is prepared for npm publishing. The published package intentionally contains only runtime artifacts (compiled `dist`), `README.md` and `COPYING` to avoid shipping private examples or sample data. Keep any private sample datasets or large example assets out of the package and use a private registry or separate repository for non-public content.
-
-## Porting note
-
-Design and behavior are influenced by the python-plyfile project; some parsing approaches and conventions are ported/adapted to TypeScript while aiming for a small, idiomatic API for Node.js and toolchains that consume compiled artifacts.
-
-## License
-
-See `COPYING` and `package.json` for license details.
-
-## Contributing
-
-Issues, bug reports and focused pull requests are welcome. Prioritize clear tests for parsing edge cases (mixed ASCII/binary, unusual property lists, and face index encodings) and keep measurement helpers small and well-documented.
-
+---
