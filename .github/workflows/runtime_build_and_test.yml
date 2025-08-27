@@ -1,0 +1,40 @@
+name: Runtime Build and Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Build, test and coverage
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "pnpm"
+
+      - name: Enable corepack and pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@latest --activate
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+
+      - name: Run tests with coverage
+        run: pnpm test:cov
+
+      - name: Check coverage threshold (lines >= 85)
+        # Read coverage summary produced by jest and fail if lines < 85
+        run: |
+          node -e "const fs=require('fs'); const p='coverage/coverage-summary.json'; if(!fs.existsSync(p)){console.error('coverage summary not found at '+p); process.exit(2);} const c=require(p); const pct=c.total.lines.pct; console.log('lines coverage %', pct); if(pct<85){console.error('Coverage below threshold: '+pct+'% < 85%'); process.exit(1);}"
