@@ -38,7 +38,8 @@ export class PlyProperty {
   set valDtype(val: string) { this._valDtypeCode = lookupType(val); }
 
   dtype(byteOrder: ByteOrder = '='): string {
-    return `${byteOrder}${this._valDtypeCode}`; // keep Python-esque flavor
+    const humanName = dataTypeReverse[this._valDtypeCode];
+    return `${byteOrder}${humanName || this._valDtypeCode}`; // return human-readable name with byte order
   }
 
   _fromFields(fields: Iterator<string>): PlyScalar | PlyList {

@@ -42,7 +42,6 @@ export const dataTypeRelation: Array<[string, string]> = [
   ['int8', 'i1'],
   ['char', 'i1'],
   ['uint8', 'u1'],
-  ['uchar', 'b1'],
   ['uchar', 'u1'],
   ['int16', 'i2'],
   ['short', 'i2'],
