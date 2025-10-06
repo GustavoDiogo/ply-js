@@ -95,31 +95,6 @@ export class PlyData implements Iterable<PlyElement> {
   const headerParsed = new PlyData(elements, parser.format === 'ascii', byteOrderMap[parser.format!], parser.comments, parser.objInfo);
 
   const dataBuf = file.subarray(offset);
-  // debug: show header offset, header lines and element summaries
-  // eslint-disable-next-line no-console
-  console.error('DEBUG header offset=', offset);
-  // eslint-disable-next-line no-console
-  console.error('DEBUG headerLines[0..5]=', headerLines.slice(0,6));
-  // eslint-disable-next-line no-console
-  console.error('DEBUG parsed elements=', headerParsed.elements.map(e=>({name:e.name,count:e.count,props:e.properties.map((p:any)=>p.name)})));
-  // eslint-disable-next-line no-console
-  console.error('DEBUG dataBuf length=', dataBuf.length, 'first32=', dataBuf.slice(0,32).toString('hex'));
-        // debug: estimate expected bytes per element (scalar-only elements)
-        try {
-          const sizes: Record<string, number> = { i1:1,u1:1,i2:2,u2:2,i4:4,u4:4,f4:4,f8:8 };
-          const per = headerParsed.elements.map(e=>{
-            const hasList = e.properties.some((p:any)=> p.constructor && p.constructor.name === 'PlyListProperty');
-            if (hasList) return { name: e.name, count: e.count, estBytes: null, hasList: true };
-            let rowBytes = 0;
-            for (const p of e.properties) {
-              const code = (p as any).valDtype as string;
-              rowBytes += sizes[code];
-            }
-            return { name: e.name, count: e.count, estBytes: rowBytes * e.count, hasList: false };
-          });
-          // eslint-disable-next-line no-console
-          console.error('DEBUG expected per-element bytes=', per);
-        } catch (e) { /* ignore */ }
 
         if (headerParsed.text) {
           const s = dataBuf.toString('utf8');

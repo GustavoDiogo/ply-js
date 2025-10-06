@@ -44,17 +44,6 @@ jobs:
       - name: Run tests with coverage
         run: pnpm test:cov
 
-      - name: Debug coverage files
-        run: |
-          echo "Current directory:"
-          pwd
-          echo "Files in current directory:"
-          ls -la
-          echo "Coverage directory contents:"
-          ls -la coverage/ || echo "Coverage directory not found"
-          echo "Looking for coverage files:"
-          find . -name "*coverage*" -type f || echo "No coverage files found"
-
       - name: Check coverage threshold (lines >= 75)
         # Read coverage summary produced by jest and show coverage stats
         run: |
