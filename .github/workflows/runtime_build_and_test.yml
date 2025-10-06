@@ -44,19 +44,55 @@ jobs:
       - name: Run tests with coverage
         run: pnpm test:cov
 
+      - name: Debug coverage files
+        run: |
+          echo "Current directory:"
+          pwd
+          echo "Files in current directory:"
+          ls -la
+          echo "Coverage directory contents:"
+          ls -la coverage/ || echo "Coverage directory not found"
+          echo "Looking for coverage files:"
+          find . -name "*coverage*" -type f || echo "No coverage files found"
+
       - name: Check coverage threshold (lines >= 75)
         # Read coverage summary produced by jest and show coverage stats
         run: |
           node -e "
           const fs = require('fs');
+          const path = require('path');
           const p = 'coverage/coverage-summary.json';
+          const fullPath = path.resolve(p);
+
+          console.log('🔍 Checking for coverage file...');
+          console.log('Working directory:', process.cwd());
+          console.log('Looking for file:', fullPath);
+          console.log('File exists:', fs.existsSync(p));
 
           if (!fs.existsSync(p)) {
             console.error('❌ Coverage summary not found at ' + p);
+            console.error('Full path:', fullPath);
+            console.error('Current directory contents:');
+            try {
+              fs.readdirSync('.').forEach(f => console.error('  ' + f));
+              if (fs.existsSync('coverage')) {
+                console.error('Coverage directory contents:');
+                fs.readdirSync('coverage').forEach(f => console.error('  coverage/' + f));
+              }
+            } catch (e) {
+              console.error('Error reading directory:', e.message);
+            }
             process.exit(2);
           }
 
-          const c = require(p);
+          let c;
+          try {
+            c = JSON.parse(fs.readFileSync(p, 'utf8'));
+          } catch (e) {
+            console.error('❌ Error reading coverage file:', e.message);
+            process.exit(3);
+          }
+
           const lines = c.total.lines.pct;
           const statements = c.total.statements.pct;
           const functions = c.total.functions.pct;
