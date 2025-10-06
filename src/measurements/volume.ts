@@ -165,6 +165,7 @@ export function estimateMass(points: number[][], faceRecords: any[] | null, opts
   }
   // compute geometric mass if faces present (or voxel-based if requested)
   let geomVol = 0;
+  let actualMethod = opts.method || 'geometric';
   if (faceRecords && faceRecords.length) {
     const triangles: number[][] = [];
     for (const f of faceRecords) {
@@ -185,10 +186,12 @@ export function estimateMass(points: number[][], faceRecords: any[] | null, opts
       // apply calibration scale to points if provided
       const scaledPoints = appliedScale === 1 ? points : points.map(p=>p.map(v=>v*appliedScale));
       geomVol = computeVolumeVoxel(scaledPoints, faceRecords, voxelSize, maxVoxels);
+      actualMethod = 'voxel';
     }
     else if (opts.method === 'slice') {
       const scaledPoints = appliedScale === 1 ? points : points.map(p=>p.map(v=>v*appliedScale));
       geomVol = computeVolumeBySlicing(scaledPoints, faceRecords, /*sliceCount=*/ (opts as any).sliceCount ?? 400);
+      actualMethod = 'slice';
     }
     else if (opts.method === 'best') {
       // run robust geometric, slicing and voxel and take consensus (median)
@@ -200,11 +203,13 @@ export function estimateMass(points: number[][], faceRecords: any[] | null, opts
     const vox = computeVolumeVoxel(scaledPoints, faceRecords, (opts as any).voxelSize ?? 0.005, (opts as any).maxVoxels ?? 2000000);
       const vols = [geom, slic, vox].filter(v => v > 0).sort((a, b) => a - b);
       if (!vols.length) geomVol = 0; else geomVol = vols[Math.floor(vols.length / 2)];
+      actualMethod = 'best';
     }
     else {
       // default geometric robust
     const scaledPoints = appliedScale === 1 ? points : points.map(p=>p.map(v=>v*appliedScale));
     geomVol = computeVolumeRobust(scaledPoints, triangles);
+      actualMethod = 'geometric';
     }
   }
   const density = appliedDensityOverride ?? opts.densityKgPerM3 ?? 985;
@@ -227,7 +232,7 @@ export function estimateMass(points: number[][], faceRecords: any[] | null, opts
   // include calibration details
   const details: any = { geomVol, density, appliedScale };
   if (appliedDensityOverride) details.appliedDensityOverride = appliedDensityOverride;
-  return { mass: geomMass, method: 'geometric', details };
+  return { mass: geomMass, method: actualMethod, details };
 }
 
 // Ray-triangle intersection (Möller–Trumbore). Returns true if ray origin+dir intersects triangle.

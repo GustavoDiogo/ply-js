@@ -201,4 +201,149 @@ describe('measurements (consolidated)', () => {
     fs.rmdirSync(folder);
   });
 
+  // Additional tests for better volume.ts coverage
+  test('orientTriangles handles empty and single triangle arrays', () => {
+    const empty = vol.orientTriangles([]);
+    expect(empty).toEqual([]);
+    
+    const single = vol.orientTriangles([[0, 1, 2]]);
+    expect(single).toEqual([[0, 1, 2]]);
+  });
+
+  test('computeVolumeFromTriangles handles edge cases', () => {
+    // Empty triangles
+    const vEmpty = vol.computeVolumeFromTriangles(cubePts, []);
+    expect(vEmpty).toBe(0);
+    
+    // Invalid triangle indices
+    const vInvalid = vol.computeVolumeFromTriangles(cubePts, [[999, 1000, 1001]]);
+    expect(vInvalid).toBe(0);
+    
+    // Degenerate triangles (same point repeated)
+    const vDegenerate = vol.computeVolumeFromTriangles(cubePts, [[0, 0, 0]]);
+    expect(vDegenerate).toBe(0);
+  });
+
+  test('estimateMassFromVolume handles invalid inputs', () => {
+    expect(vol.estimateMassFromVolume(0)).toBe(0);
+    expect(vol.estimateMassFromVolume(-1)).toBe(0);
+    expect(vol.estimateMassFromVolume(NaN)).toBe(0);
+    expect(vol.estimateMassFromVolume(Infinity)).toBe(0);
+    
+    // Valid input
+    expect(vol.estimateMassFromVolume(1, 1000)).toBe(1000);
+  });
+
+  test('computeVolumeFromFaces handles various face record formats', () => {
+    // Test with empty faces
+    const vEmpty = vol.computeVolumeFromFaces(cubePts, []);
+    expect(vEmpty).toBe(0);
+    
+    // Test with faces that have no valid vertex lists
+    const vInvalid = vol.computeVolumeFromFaces(cubePts, [{ someProperty: 'test' }]);
+    expect(vInvalid).toBe(0);
+    
+    // Test with different property names
+    const facesIndices = quadFaces.map(f => ({ indices: f }));
+    const vIndices = vol.computeVolumeFromFaces(cubePts, facesIndices);
+    expect(vIndices).toBeGreaterThan(0.99);
+    expect(vIndices).toBeLessThan(1.01);
+    
+    const facesVertices = quadFaces.map(f => ({ vertices: f }));
+    const vVertices = vol.computeVolumeFromFaces(cubePts, facesVertices);
+    expect(vVertices).toBeGreaterThan(0.99);
+    expect(vVertices).toBeLessThan(1.01);
+  });
+
+  test('estimateMass function with various options', () => {
+    // Test with no faces (should handle gracefully)
+    const resultNoFaces = vol.estimateMass(cubePts, null, {});
+    expect(resultNoFaces.mass).toBeGreaterThanOrEqual(0);
+    expect(resultNoFaces.method).toBeDefined();
+    
+    // Test with empty faces
+    const resultEmptyFaces = vol.estimateMass(cubePts, [], {});
+    expect(resultEmptyFaces.mass).toBeGreaterThanOrEqual(0);
+    
+    // Test with custom density
+    const resultCustomDensity = vol.estimateMass(cubePts, quadFaces, { densityKgPerM3: 500 });
+    expect(resultCustomDensity.mass).toBeGreaterThan(0);
+    
+    // Test with geometric method
+    const resultGeometric = vol.estimateMass(cubePts, quadFaces, { method: 'geometric' });
+    expect(resultGeometric.mass).toBeGreaterThan(0);
+    expect(resultGeometric.method).toBe('geometric');
+    
+    // Test with voxel method
+    const resultVoxel = vol.estimateMass(cubePts, quadFaces, { 
+      method: 'voxel', 
+      voxelSize: 0.1,
+      maxVoxels: 10000 
+    });
+    expect(resultVoxel.mass).toBeGreaterThan(0);
+    expect(resultVoxel.method).toBe('voxel');
+    
+    // Test with slice method
+    const resultSlice = vol.estimateMass(cubePts, quadFaces, { 
+      method: 'slice',
+      sliceCount: 50
+    });
+    expect(resultSlice.mass).toBeGreaterThan(0);
+    expect(resultSlice.method).toBe('slice');
+  });
+
+  test('estimateMass with calibration options', () => {
+    // Test with calibration object
+    const calibrationObj = { scale: 0.5, densityKgPerM3: 2000 };
+    const resultCalibration = vol.estimateMass(cubePts, quadFaces, { 
+      calibration: calibrationObj 
+    });
+    expect(resultCalibration.mass).toBeGreaterThan(0);
+    
+    // Test with invalid calibration string (should not crash)
+    const resultInvalidCal = vol.estimateMass(cubePts, quadFaces, { 
+      calibration: 'nonexistent-machine' 
+    });
+    expect(resultInvalidCal.mass).toBeGreaterThan(0);
+  });
+
+  test('computeVolumeVoxel with different parameters', () => {
+    // Test with larger voxel size (faster but less accurate)
+    const volLarge = vol.computeVolumeVoxel(cubePts, quadFaces, 0.2, 1000);
+    expect(volLarge).toBeGreaterThan(0.5);
+    expect(volLarge).toBeLessThan(1.5);
+    
+    // Test with very small max voxels (should handle limitation)
+    const volLimited = vol.computeVolumeVoxel(cubePts, quadFaces, 0.01, 10);
+    expect(volLimited).toBeGreaterThan(0);
+  });
+
+  test('computeVolumeBySlicing with different slice counts', () => {
+    // Test with few slices (faster but less accurate)
+    const volFewSlices = vol.computeVolumeBySlicing(cubePts, quadFaces, 10);
+    expect(volFewSlices).toBeGreaterThan(0.5);
+    expect(volFewSlices).toBeLessThan(1.5);
+    
+    // Test with many slices (more accurate)
+    const volManySlices = vol.computeVolumeBySlicing(cubePts, quadFaces, 1000);
+    expect(volManySlices).toBeGreaterThan(0.9);
+    expect(volManySlices).toBeLessThan(1.1);
+  });
+
+  test('volume functions handle degenerate geometries', () => {
+    // Points that form a flat plane (no volume)
+    const flatPts = [[0,0,0], [1,0,0], [0,1,0], [1,1,0]];
+    const flatFaces = [[0,1,2,3]];
+    
+    const flatVol = vol.computeVolumeFromFaces(flatPts, flatFaces);
+    expect(flatVol).toBe(0);
+    
+    // Single point repeated
+    const singlePt = [[0,0,0], [0,0,0], [0,0,0]];
+    const singleFace = [[0,1,2]];
+    
+    const singleVol = vol.computeVolumeFromFaces(singlePt, singleFace);
+    expect(singleVol).toBe(0);
+  });
+
 });
