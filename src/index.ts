@@ -27,3 +27,4 @@ export * from './data';
 export * from './api';
 export * from './header';
 export * from './measurements';
+export { readBinaryPly, writeBinaryPly, isValidPlyBuffer, validatePlyBuffer } from './readBinary';
