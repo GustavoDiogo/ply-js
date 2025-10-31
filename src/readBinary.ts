@@ -4,10 +4,77 @@ import { PlyData } from './data';
 import { byteOrderMap } from './utils';
 
 /**
+ * Validates if a buffer contains a valid PLY file by checking the magic header.
+ * A valid PLY file must start with 'ply' followed by a newline.
+ * 
+ * @param buffer - The buffer to validate
+ * @returns true if the buffer appears to be a valid PLY file, false otherwise
+ */
+export function isValidPlyBuffer(buffer: Buffer): boolean {
+  if (!buffer || buffer.length < 4) return false;
+  
+  // Convert buffer to string for header parsing
+  const header = buffer.toString('ascii', 0, Math.min(buffer.length, 2048));
+  const lines = header.split(/\r?\n/);
+  
+  // Must start with 'ply' (first line, trimmed)
+  if (lines.length === 0 || lines[0].trim() !== 'ply') {
+    return false;
+  }
+
+  // Must contain 'format' line with valid format
+  const hasValidFormat = lines.some(line => {
+    const trimmed = line.trim();
+    return trimmed.startsWith('format ') && 
+           (trimmed.includes('ascii') || 
+            trimmed.includes('binary_little_endian') || 
+            trimmed.includes('binary_big_endian'));
+  });
+  if (!hasValidFormat) {
+    return false;
+  }
+
+  // Must contain end_header
+  const hasEndHeader = lines.some(line => line.trim() === 'end_header');
+  if (!hasEndHeader) {
+    return false;
+  }
+
+  return true;
+}
+
+/**
+ * Validates if a buffer contains a valid PLY file, throwing an error if invalid.
+ * 
+ * @param buffer - The buffer to validate
+ * @throws {Error} If the buffer is not a valid PLY file
+ */
+export function validatePlyBuffer(buffer: Buffer): void {
+  if (!buffer) {
+    throw new Error('Invalid PLY file: buffer is null or undefined');
+  }
+  
+  if (buffer.length < 4) {
+    throw new Error('Invalid PLY file: buffer too small (minimum 4 bytes required)');
+  }
+  
+  if (!isValidPlyBuffer(buffer)) {
+    const preview = buffer.subarray(0, Math.min(20, buffer.length)).toString('ascii').replace(/[^\x20-\x7E]/g, '.');
+    throw new Error(`Invalid PLY file: missing 'ply' header (found: "${preview}...")`);
+  }
+}
+
+/**
  * Read a binary or ASCII PLY from a Buffer and return a fully parsed PlyData.
  * This is the root-level implementation previously living under src/core.
+ * 
+ * @param buffer - The buffer containing PLY data
+ * @returns Parsed PLY data
+ * @throws {Error} If the buffer is not a valid PLY file
  */
 export function readBinaryPly(buffer: Buffer): PlyData {
+  // Validate the buffer is a PLY file before processing
+  validatePlyBuffer(buffer);
   // Use a buffer-backed reader so we correctly locate the header end without relying on ascii search
   let offset = 0;
   const rawReader = { read(n: number): Buffer | null {

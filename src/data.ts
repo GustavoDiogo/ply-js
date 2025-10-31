@@ -23,6 +23,7 @@ import { PlyElement } from './element';
 import { PlyHeaderLines, PlyHeaderParser } from './header';
 import { byteOrderMap, byteOrderReverse, nativeByteOrder } from './utils';
 import { ByteOrder, ReadOptions, WriteOptions } from './types';
+import { validatePlyBuffer } from './readBinary';
 import fs from 'fs';
 
 export class PlyData implements Iterable<PlyElement> {
@@ -72,6 +73,9 @@ export class PlyData implements Iterable<PlyElement> {
     try {
       if (typeof pathOrStream === 'string') {
         const file = fs.readFileSync(pathOrStream);
+        
+        // Validate that the file is actually a PLY file before processing
+        validatePlyBuffer(file);
 
         // buffer-backed reader that tracks offset consumed by PlyHeaderLines
         let offset = 0;

@@ -2,6 +2,7 @@ import { PlyHeaderParser } from './header';
 import { PlyElement } from './element';
 import { PlyData } from './data';
 import { byteOrderMap } from './utils';
+import { isValidPlyBuffer, validatePlyBuffer } from './readBinary';
 import type { ByteOrder } from './types';
 
 export function readPlyFromLines(lines: Iterable<string>): PlyData {
@@ -79,3 +80,87 @@ export function extractMetadata(ply: PlyData) {
   elements: ply.elements.map(e => e.name),
   };
 }
+
+/**
+ * Check if a file, buffer, or stream contains valid PLY data
+ * Similar to PlyData.read, accepts: file path (string), Buffer, or Readable stream
+ * 
+ * @param input - File path (string), Buffer, or Readable stream to validate
+ * @returns Promise<boolean> - true if the input is a valid PLY file, false otherwise
+ * 
+ * @example
+ * // Check a file path
+ * const isValid = await isPlyFile('model.ply');
+ * 
+ * // Check a buffer
+ * const buffer = fs.readFileSync('model.ply');
+ * const isValid = await isPlyFile(buffer);
+ * 
+ * // Check a stream
+ * const stream = fs.createReadStream('model.ply');
+ * const isValid = await isPlyFile(stream);
+ */
+export async function isPlyFile(input: string | Buffer | NodeJS.ReadableStream): Promise<boolean> {
+  try {
+    // If it's a string (file path), read the file
+    if (typeof input === 'string') {
+      const fs = await import('fs');
+      const buffer = await fs.promises.readFile(input);
+      return isValidPlyBuffer(buffer);
+    }
+    
+    // If it's already a Buffer, validate directly
+    if (Buffer.isBuffer(input)) {
+      return isValidPlyBuffer(input);
+    }
+    
+    // If it's a Readable stream, read the first chunk to validate
+    if (input && typeof (input as any).read === 'function') {
+      const chunks: Buffer[] = [];
+      const stream = input as any; // Use any to avoid type issues with destroy
+      
+      return new Promise<boolean>((resolve) => {
+        let validated = false;
+        
+        stream.on('data', (chunk: Buffer | string) => {
+          if (!validated) {
+            // Convert string chunks to Buffer
+            const bufferChunk = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+            chunks.push(bufferChunk);
+            const buffer = Buffer.concat(chunks);
+            
+            // We need at least enough data to check the header
+            // PLY files need "ply\n", "format ...", and "end_header\n"
+            if (buffer.length >= 200) { // reasonable minimum for header validation
+              validated = true;
+              if (typeof stream.destroy === 'function') {
+                stream.destroy(); // Stop reading once we have enough
+              }
+              resolve(isValidPlyBuffer(buffer));
+            }
+          }
+        });
+        
+        stream.on('end', () => {
+          if (!validated) {
+            const buffer = Buffer.concat(chunks);
+            resolve(isValidPlyBuffer(buffer));
+          }
+        });
+        
+        stream.on('error', () => {
+          resolve(false);
+        });
+      });
+    }
+    
+    return false;
+  } catch (error) {
+    return false;
+  }
+}
+
+/**
+ * Re-export PLY validation utilities for external use
+ */
+export { isValidPlyBuffer, validatePlyBuffer };
